@@ -276,7 +276,7 @@ exports.changePassword = async (req, res) => {
     existingUser.password = hashedNewPassword;
     await existingUser.save();
     return res.status(200).json({
-      success: false,
+      success: true,
       message: "Congratulations! Password Updated Successfully!",
     });
   } catch (err) {
