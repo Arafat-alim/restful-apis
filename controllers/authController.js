@@ -3,6 +3,7 @@ const {
   signupSchema,
   signinSchema,
   acceptCodeSchema,
+  changePasswordSchema,
 } = require("../middelwares/validator");
 const User = require("../models/usersModel");
 const { doHash, doHashValidation, hmacProcess } = require("../utils/hashing");
@@ -226,5 +227,59 @@ exports.verifyVerificationCode = async (req, res) => {
     });
   } catch (err) {
     console.log("Something Went Wrong in Verifying Verification Code: ", err);
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  const { userId, verified } = req.user;
+  console.log("", req.user);
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const { error, value } = await changePasswordSchema.validate({
+      oldPassword,
+      newPassword,
+    });
+
+    if (error) {
+      return res
+        .status(401)
+        .json({ success: false, message: error.details[0].message });
+    }
+
+    //! Optional
+    if (!verified) {
+      return res.status(401).json({
+        message: "You are not verified yet, please verify your email Id first!",
+      });
+    }
+
+    //! find user
+    const existingUser = await User.findOne({ _id: userId }).select(
+      "+password"
+    );
+    if (!existingUser) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User does not exists!" });
+    }
+
+    const result = await doHashValidation(oldPassword, existingUser.password);
+
+    if (!result) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid Credentials" });
+    }
+
+    const hashedNewPassword = await doHash(oldPassword, 12);
+    existingUser.password = hashedNewPassword;
+    await existingUser.save();
+    return res.status(200).json({
+      success: false,
+      message: "Congratulations! Password Updated Successfully!",
+    });
+  } catch (err) {
+    console.log("Something went wrong with the forgot password api: ", err);
   }
 };

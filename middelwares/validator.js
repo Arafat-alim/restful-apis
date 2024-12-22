@@ -35,3 +35,8 @@ exports.acceptCodeSchema = Joi.object({
 
   providedCode: Joi.number().required(),
 });
+
+exports.changePasswordSchema = Joi.object({
+  oldPassword: Joi.string().min(4).max(20).alphanum().required(),
+  newPassword: Joi.string().min(4).max(20).alphanum().required(),
+});

@@ -22,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 
 mongoose
   .connect(process.env.MONGO_URL)
-  .then(() => console.log("Mnogo DB is connected"))
+  .then(() => console.log("Mongo DB is connected"))
   .catch((err) => console.log("Something went wrong: ", err));
 
 //! use appRouter
