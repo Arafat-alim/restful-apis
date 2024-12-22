@@ -32,5 +32,6 @@ router.patch(
 );
 
 router.delete("/delete-user", identifier, authController.deleteUser);
+router.get("/get-all-users", identifier, authController.getAllNonDeleteUsers);
 
 module.exports = router;

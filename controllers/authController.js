@@ -435,3 +435,23 @@ exports.deleteUser = async (req, res) => {
     console.log("Somethign went wrong with Delete User API: ", err);
   }
 };
+
+exports.getAllNonDeleteUsers = async (req, res) => {
+  try {
+    const users = await User.find({ deletedUser: false });
+    // Improved response:  Return the actual user data if found
+    if (users.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No non-deleted users found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Non-deleted users retrieved successfully", // More descriptive message
+      data: users, // Include the user data in the response
+    });
+  } catch (err) {
+    console.log("Something went wrong with Get All Non Deleted User: ", err);
+  }
+};
