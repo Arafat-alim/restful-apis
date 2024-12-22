@@ -40,3 +40,25 @@ exports.changePasswordSchema = Joi.object({
   oldPassword: Joi.string().min(4).max(20).alphanum().required(),
   newPassword: Joi.string().min(4).max(20).alphanum().required(),
 });
+
+exports.sendForgotPasswordCodeSchema = Joi.object({
+  email: Joi.string()
+    .min(5)
+    .max(60)
+    .required()
+    .email({
+      tlds: { allow: ["com", "net"] },
+    }),
+});
+
+exports.acceptFPCodeSchema = Joi.object({
+  email: Joi.string()
+    .min(5)
+    .max(50)
+    .required()
+    .email({
+      tlds: { allow: ["com", "net"] },
+    }),
+  providedCode: Joi.string().required(),
+  newPassword: Joi.string().min(5).max(20).alphanum().required(),
+});

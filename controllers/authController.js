@@ -4,12 +4,15 @@ const {
   signinSchema,
   acceptCodeSchema,
   changePasswordSchema,
+  sendForgotPasswordCodeSchema,
+  acceptFPCodeSchema,
 } = require("../middelwares/validator");
 const User = require("../models/usersModel");
 const { doHash, doHashValidation, hmacProcess } = require("../utils/hashing");
 const { generateSecretKey } = require("../utils/generateJwtToken");
 const transport = require("../middelwares/sendMail");
 const generateVerificationEmail = require("../utils/generateVerificationMail");
+const generateEmailTemplate = require("../utils/generateEmailTemplate");
 
 exports.signup = async (req, res) => {
   const { email, password } = req.body;
@@ -175,8 +178,6 @@ exports.verifyVerificationCode = async (req, res) => {
       "+verificationCode +verificationCodeValidation"
     );
 
-    console.log(existingUser);
-
     if (!existingUser) {
       return res
         .status(401)
@@ -281,5 +282,128 @@ exports.changePassword = async (req, res) => {
     });
   } catch (err) {
     console.log("Something went wrong with the forgot password api: ", err);
+  }
+};
+
+exports.sendforgotPasswordCode = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const { error, value } = await sendForgotPasswordCodeSchema.validate({
+      email,
+    });
+    if (error) {
+      return res
+        .status(401)
+        .json({ success: false, message: error.details[0].message });
+    }
+    const existingUser = await User.findOne({ email });
+    console.log(existingUser);
+    if (!existingUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User does not exisis!" });
+    }
+
+    const codeValue = Math.floor(Math.random() * 5 * 100000).toString();
+    const info = await transport.sendMail({
+      from: process.env.NODE_SENDING_EMAIL_ADDRESS,
+      to: existingUser.email,
+      subject: "Reset Your Password",
+      html: generateEmailTemplate({
+        subject: "Reset Your Password",
+        headerText: "Password Reset Request",
+        bodyText:
+          "It seems like you requested a password reset. Please use the verification code below to complete the process.",
+        actionText: null,
+        actionUrl: null,
+        verificationCode: `${codeValue}`,
+      }),
+    });
+
+    if (info.accepted[0] === existingUser.email) {
+      const hashedCodeValue = await hmacProcess(
+        codeValue,
+        process.env.HMAC_VERIFICATION_CODE_SECRET
+      );
+      existingUser.forgotPasswordCode = hashedCodeValue;
+      existingUser.forgotPasswordCodeValidation = Date.now();
+      await existingUser.save();
+      return res.status(200).json({
+        success: true,
+        message: `Reset Code has been sent! Please check your email ${existingUser.email}`,
+      });
+    }
+  } catch (err) {
+    console.log("Something went wrong with Forgot password API: ", err);
+  }
+};
+
+exports.verifyForgotPasswordCode = async (req, res) => {
+  const { email, providedCode, newPassword } = req.body;
+
+  try {
+    const { error, value } = await acceptFPCodeSchema.validate({
+      email,
+      providedCode,
+      newPassword,
+    });
+
+    if (error) {
+      return res
+        .status(401)
+        .json({ success: false, message: error.details[0].message });
+    }
+
+    const existingUser = await User.findOne({ email }).select(
+      "+forgotPasswordCode +forgotPasswordCodeValidation"
+    );
+
+    console.log(existingUser);
+    if (!existingUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User does not exisit" });
+    }
+
+    if (
+      !existingUser.forgotPasswordCode ||
+      !existingUser.forgotPasswordCodeValidation
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "something is wrong with the code" });
+    }
+
+    if (
+      Date.now() - existingUser.forgotPasswordCodeValidation >
+      5 * 60 * 1000
+    ) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Code has been expired!" });
+    }
+
+    const codeValue = providedCode.toString();
+    const hashedCode = await hmacProcess(
+      codeValue,
+      process.env.HMAC_VERIFICATION_CODE_SECRET
+    );
+
+    if (hashedCode === existingUser.forgotPasswordCode) {
+      existingUser.forgotPasswordCode = undefined;
+      existingUser.forgotPasswordCodeValidation = undefined;
+      await existingUser.save();
+      return res.status(201).json({
+        success: true,
+        message: "Password has been reset. Please login!",
+      });
+    }
+    res.status(401).json({
+      success: false,
+      message: "unexpected occured",
+    });
+  } catch (err) {
+    console.log("Something went wrong with Forgot password API: ", err);
   }
 };
