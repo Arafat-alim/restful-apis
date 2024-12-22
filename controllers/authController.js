@@ -233,7 +233,6 @@ exports.verifyVerificationCode = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   const { userId, verified } = req.user;
-  console.log("", req.user);
   const { oldPassword, newPassword } = req.body;
 
   try {
@@ -405,5 +404,31 @@ exports.verifyForgotPasswordCode = async (req, res) => {
     });
   } catch (err) {
     console.log("Something went wrong with Forgot password API: ", err);
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  const { userId } = req.user;
+
+  try {
+    const existingUser = await User.findOne({ _id: userId });
+    if (!existingUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User does not exists!" });
+    }
+    if (existingUser.deletedUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already deleted" });
+    }
+
+    existingUser.deletedUser = true;
+    await existingUser.save();
+    return res
+      .status(200)
+      .json({ success: true, message: "User has been deleted successfully" });
+  } catch (err) {
+    console.log("Somethign went wrong with Delete User API: ", err);
   }
 };

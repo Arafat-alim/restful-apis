@@ -31,4 +31,6 @@ router.patch(
   authController.verifyForgotPasswordCode
 );
 
+router.delete("/delete-user", identifier, authController.deleteUser);
+
 module.exports = router;
