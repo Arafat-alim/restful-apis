@@ -389,7 +389,10 @@ exports.verifyForgotPasswordCode = async (req, res) => {
       process.env.HMAC_VERIFICATION_CODE_SECRET
     );
 
+    const hashedNewPassword = await doHash(newPassword, 12);
+
     if (hashedCode === existingUser.forgotPasswordCode) {
+      existingUser.password = hashedNewPassword;
       existingUser.forgotPasswordCode = undefined;
       existingUser.forgotPasswordCodeValidation = undefined;
       await existingUser.save();
