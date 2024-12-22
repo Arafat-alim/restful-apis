@@ -124,8 +124,6 @@ exports.sendVerificationCode = async (req, res) => {
         .json({ success: false, message: "User does not exists" });
     }
 
-    console.log("exisitingUser_", exisitingUser);
-
     //! token generated with the help of crypto
     // const token = generateSecretKey(16);
     const token = Math.floor(Math.random() * 1000000).toString();
