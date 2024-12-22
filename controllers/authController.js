@@ -16,43 +16,63 @@ const generateEmailTemplate = require("../utils/generateEmailTemplate");
 
 exports.signup = async (req, res) => {
   const { email, password } = req.body;
-  try {
-    const { error, value } = signupSchema.validate({ email, password });
 
+  try {
+    // Validation (using Joi or similar)
+    const { error, value } = signupSchema.validate({ email, password });
     if (error) {
       return res
-        .status(401)
-        .json({ success: false, message: error.details[0].message });
+        .status(400)
+        .json({ success: false, message: error.details[0].message }); // Use 400 Bad Request for validation errors
     }
 
-    //! check new user is alreay exisi in the database or not
+    // Check for existing user
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
       return res
-        .status(401)
-        .json({ success: false, message: "User already exist!" });
+        .status(409)
+        .json({ success: false, message: "User already exists!" }); // Use 409 Conflict for duplicate user
     }
 
-    //! if existing user is not exist then hash the password
+    // Hash the password
     const hashedPassword = await doHash(password, 12);
 
-    const newUser = new User({
-      email,
-      password: hashedPassword,
-    });
+    const newUser = new User({ email, password: hashedPassword });
+    const savedUser = await newUser.save();
 
-    const result = await newUser.save(); // it will return email and password
-    result.password = undefined;
-    if (result) {
-      res.status(201).json({
-        success: true,
-        message: "Congratulations! User has been created Successfully",
-        result,
-      });
-    }
-  } catch (err) {
-    console.log("Something Went Wrong in Auth Controller: ", err);
+    // Remove sensitive data before sending the response. No need for  result.password = undefined because select:false in the schema
+    const userWithoutPassword = savedUser.toObject(); //we can do this by .select("-password") method also in schema for this no need to write this code
+    delete userWithoutPassword.password;
+
+    // Send welcome email (make this asynchronous)
+    transport
+      .sendMail({
+        to: savedUser.email,
+        from: process.env.NODE_SENDING_EMAIL_ADDRESS, // Configure sender email in .env
+        subject: "Welcome to Our Service!", // More descriptive subject
+        html: generateEmailTemplate({
+          subject: "Welcome!", //data that will be render on the email template in the ejs file
+          headerText: "Welcome!",
+          bodyText:
+            "Thank you for registering! Please verify your email to access more features.",
+          actionText: "Please visit Dashboard", // Clear call to action
+          actionUrl: "https://dev-arafat.netlify.app/", // Replace with your verification URL with token
+          verificationCode: null, // consider sending a verification token or link
+        }),
+      })
+      .then(() => console.log("Email sent successfully"))
+      .catch((err) => console.error("Error sending email:", err)); //Error handling
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully. Check your email for verification.", //Tell user to check their mail
+      user: userWithoutPassword, // Send user data in the response (without password)
+    });
+  } catch (error) {
+    console.error("Error during signup:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "An error occurred during signup." }); // Generic error message for security
   }
 };
 
