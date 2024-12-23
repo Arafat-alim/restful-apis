@@ -62,3 +62,9 @@ exports.acceptFPCodeSchema = Joi.object({
   providedCode: Joi.string().required(),
   newPassword: Joi.string().min(5).max(20).alphanum().required(),
 });
+
+exports.createPostSchema = Joi.object({
+  title: Joi.string().min(4).max(40).required(),
+  description: Joi.string().min(5).max(200).required(),
+  userId: Joi.string().required(),
+});

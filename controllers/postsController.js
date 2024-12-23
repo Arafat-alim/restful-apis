@@ -1,3 +1,4 @@
+const { createPostSchema } = require("../middelwares/validator");
 const Post = require("../models/postsModel");
 
 exports.getPosts = async (req, res) => {
@@ -18,7 +19,7 @@ exports.getPosts = async (req, res) => {
       .skip(pageNum * postPerPage)
       .limit(postPerPage)
       .populate({
-        path: "UserId",
+        path: "userId",
         select: "email",
       });
 
@@ -53,11 +54,42 @@ exports.getPost = async (req, res) => {
 };
 
 exports.createPost = async (req, res) => {
+  const { title, description } = req.body;
+  const { userId } = req.user;
   try {
+    const { error, value } = await createPostSchema.validate({
+      title,
+      description,
+      userId,
+    });
+
+    if (error) {
+      return res
+        .status(401)
+        .json({ success: false, message: error.details[0].message });
+    }
+
+    const results = await Post.create({
+      title,
+      description,
+      userId,
+    });
+
+    if (results) {
+      return res.status(201).json({
+        success: true,
+        message: "Post created successfully",
+        data: results,
+      });
+    }
+    res.status(403).json({ success: false, message: "unexpected occured" });
   } catch (err) {
     console.log("Something went wrong with Get Posts API: ", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to post. Please try again later.",
+    });
   }
-  res.status(200).json({ success: true, message: "Posting" });
 };
 
 exports.updatePost = async (req, res) => {
