@@ -45,12 +45,31 @@ exports.getPosts = async (req, res) => {
   }
 };
 
+//! getPost by id
 exports.getPost = async (req, res) => {
+  const { _id } = req.query;
   try {
+    //! fetch post using id
+    const existingPost = await Post.findOne({ _id }).populate({
+      path: "userId",
+      select: "email",
+    });
+
+    if (!existingPost) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post unavailable" });
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Post Found", data: existingPost });
   } catch (err) {
-    console.log("Something went wrong with Get Posts API: ", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch post. Please try again later.",
+    });
   }
-  res.status(200).json({ success: true, message: "Showing single post" });
 };
 
 exports.createPost = async (req, res) => {
