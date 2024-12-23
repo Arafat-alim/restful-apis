@@ -165,11 +165,23 @@ exports.updatePost = async (req, res) => {
 };
 
 exports.deletePost = async (req, res) => {
+  const { _id } = req.query;
   try {
+    const deletePost = await Post.findOneAndDelete({ _id });
+    if (!deletePost) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post does not found" });
+    }
+    return res
+      .status(200)
+      .json({ success: false, message: "Post deleted successfully" });
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: "Failed to delete post. Please try again later.",
+      message: `${
+        err ? err : "Failed to delete post. Please try again later."
+      }`,
     });
   }
 };
