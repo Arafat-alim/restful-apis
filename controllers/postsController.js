@@ -1,4 +1,7 @@
-const { createPostSchema } = require("../middelwares/validator");
+const {
+  createPostSchema,
+  updatePostSchema,
+} = require("../middelwares/validator");
 const Post = require("../models/postsModel");
 
 exports.getPosts = async (req, res) => {
@@ -40,7 +43,7 @@ exports.getPosts = async (req, res) => {
     console.log("Something went wrong with Get Posts API: ", err);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch posts. Please try again later.",
+      message: err,
     });
   }
 };
@@ -112,17 +115,61 @@ exports.createPost = async (req, res) => {
 };
 
 exports.updatePost = async (req, res) => {
+  const { title, description } = req.body;
+  const { _id } = req.query;
   try {
+    //! find exisiting post
+    const existingPost = await Post.findOne({ _id });
+    if (!existingPost) {
+      return res
+        .status(404)
+        .json({ status: false, message: "Post unavailable" });
+    }
+    const { error, value } = await updatePostSchema.validate({
+      title,
+      description,
+    });
+    if (error) {
+      return res
+        .status(401)
+        .json({ status: false, message: error.details[0].message });
+    }
+
+    existingPost.title = title ? title : existingPost.title;
+    existingPost.description = description
+      ? description
+      : existingPost.description;
+
+    console.log(existingPost);
+    const results = await existingPost.save();
+    console.log(results);
+    if (results) {
+      return res.status(201).json({
+        success: true,
+        message: "Post Updated Successfully",
+        data: results,
+      });
+    }
+    return res.status(401).json({
+      success: false,
+      message: "unexpected occur",
+    });
   } catch (err) {
-    console.log("Something went wrong with Get Posts API: ", err);
+    res.status(500).json({
+      success: false,
+      message: `${
+        err.length ? err : "Failed to update post. Please try again later."
+      }`,
+    });
   }
-  res.status(200).json({ success: true, message: "Updated Post" });
 };
 
 exports.deletePost = async (req, res) => {
   try {
   } catch (err) {
-    console.log("Something went wrong with Get Posts API: ", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete post. Please try again later.",
+    });
   }
-  res.status(200).json({ success: true, message: "Delete Post" });
 };

@@ -29,5 +29,6 @@ exports.identifier = async (req, res, next) => {
     }
   } catch (err) {
     console.log("Something went wrong in verfying the user: ", err);
+    return res.status(401).json({ success: false, message: err });
   }
 };
