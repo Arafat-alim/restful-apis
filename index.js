@@ -4,6 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const appRouter = require("./routers/authRouter");
+const postsRouter = require("./routers/postsRouter");
 // const { generateSecretKey } = require("./utils/generateJwtToken");
 
 const app = express();
@@ -27,6 +28,8 @@ mongoose
 
 //! use appRouter
 app.use("/api/auth", appRouter);
+//! use postsRouter
+app.use("/api/post", postsRouter);
 //! create routers
 app.get("/", (req, res) => {
   res.json({
@@ -34,4 +37,6 @@ app.get("/", (req, res) => {
   });
 });
 
-app.listen(PORT, () => console.log(`Server is listening at ${PORT}`)); //! http://localhost:8000/
+app.listen(PORT, () =>
+  console.log(`Server is listening at http://localhost:${PORT}/`)
+); //! http://localhost:8000/
