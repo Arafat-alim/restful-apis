@@ -40,3 +40,5 @@ app.get("/", (req, res) => {
 app.listen(PORT, () =>
   console.log(`Server is listening at http://localhost:${PORT}/`)
 ); //! http://localhost:8000/
+
+module.exports = app;
